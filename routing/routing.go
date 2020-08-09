@@ -66,8 +66,8 @@ func (r routeSlice) Swap(i, j int) {
 }
 
 type router struct {
-	ifaces []net.Interface
-	addrs  []ipAddrs
+	ifaces [1024]net.Interface
+	addrs  [1024]ipAddrs
 	v4, v6 routeSlice
 }
 
@@ -102,9 +102,6 @@ func (r *router) RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *n
 		err = errors.New("IP is not valid as IPv4 or IPv6")
 		return
 	}
-
-	// Interfaces are 1-indexed, but we store them in a 0-indexed array.
-	ifaceIndex--
 
 	iface = &r.ifaces[ifaceIndex]
 	if preferredSrc == nil {
@@ -211,11 +208,8 @@ loop:
 	if err != nil {
 		return nil, err
 	}
-	for i, iface := range ifaces {
-		if i != iface.Index-1 {
-			return nil, fmt.Errorf("out of order iface %d = %v", i, iface)
-		}
-		rtr.ifaces = append(rtr.ifaces, iface)
+	for _, iface := range ifaces {
+		rtr.ifaces[iface.Index] = iface
 		var addrs ipAddrs
 		ifaceAddrs, err := iface.Addrs()
 		if err != nil {
@@ -235,7 +229,7 @@ loop:
 				}
 			}
 		}
-		rtr.addrs = append(rtr.addrs, addrs)
+		rtr.addrs[iface.Index] = addrs
 	}
 	return rtr, nil
 }
